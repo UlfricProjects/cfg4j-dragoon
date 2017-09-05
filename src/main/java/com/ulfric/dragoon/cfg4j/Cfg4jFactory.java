@@ -42,13 +42,14 @@ public class Cfg4jFactory implements Factory {
 		Settings settings = Stereotypes.getFirst(field, Settings.class);
 
 		Path file = folder.resolve(getFileName(settings, field));
-		Path absoluteFile = file.toAbsolutePath();
 
-		ConfigurationSource source = new FilesConfigurationSource(new SingleConfigFilesProvider(absoluteFile));
+		ConfigurationSource disk =
+				new FilesConfigurationSource(new SingleConfigFilesProvider(file.toAbsolutePath()));
 		ConfigurationSource defaults =
 				new SpecificClassPathConfigurationSource(type.getClassLoader(), new SingleConfigFilesProvider(file));
+
 		ConfigurationProvider provider = new ConfigurationProviderBuilder()
-				.withConfigurationSource(new FallbackConfigurationSource(source, defaults))
+				.withConfigurationSource(new FallbackConfigurationSource(disk, defaults))
 				.withReloadStrategy(reload(settings))
 				.build();
 
