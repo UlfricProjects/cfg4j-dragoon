@@ -3,7 +3,6 @@ package com.ulfric.dragoon.cfg4j;
 import org.cfg4j.provider.ConfigurationProvider;
 import org.cfg4j.provider.ConfigurationProviderBuilder;
 import org.cfg4j.source.ConfigurationSource;
-import org.cfg4j.source.classpath.ClasspathConfigurationSource;
 import org.cfg4j.source.compose.FallbackConfigurationSource;
 import org.cfg4j.source.files.FilesConfigurationSource;
 import org.cfg4j.source.reload.ReloadStrategy;
@@ -46,7 +45,8 @@ public class Cfg4jFactory implements Factory {
 		Path absoluteFile = file.toAbsolutePath();
 
 		ConfigurationSource source = new FilesConfigurationSource(new SingleConfigFilesProvider(absoluteFile));
-		ConfigurationSource defaults = new ClasspathConfigurationSource(new SingleConfigFilesProvider(file));
+		ConfigurationSource defaults =
+				new SpecificClassPathConfigurationSource(type.getClassLoader(), new SingleConfigFilesProvider(file));
 		ConfigurationProvider provider = new ConfigurationProviderBuilder()
 				.withConfigurationSource(new FallbackConfigurationSource(source, defaults))
 				.withReloadStrategy(reload(settings))
