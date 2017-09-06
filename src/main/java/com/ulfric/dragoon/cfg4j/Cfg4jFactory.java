@@ -1,9 +1,10 @@
 package com.ulfric.dragoon.cfg4j;
 
-import org.cfg4j.provider.ConfigurationProvider;
-import org.cfg4j.provider.ConfigurationProviderBuilder;
 import org.cfg4j.source.ConfigurationSource;
 import org.cfg4j.source.compose.FallbackConfigurationSource;
+import org.cfg4j.source.context.propertiesprovider.JsonBasedPropertiesProvider;
+import org.cfg4j.source.context.propertiesprovider.PropertiesProviderSelector;
+import org.cfg4j.source.context.propertiesprovider.PropertyBasedPropertiesProvider;
 import org.cfg4j.source.files.FilesConfigurationSource;
 import org.cfg4j.source.reload.ReloadStrategy;
 
@@ -31,27 +32,31 @@ public class Cfg4jFactory implements Factory {
 	}
 
 	@Override
-	public <T> T request(Class<T> type, Object... parameters) {
+	public <T> T request(Class<T> type, Object... parameters) { // TODO stop leaking from reload
 		if (parameters.length != 2) {
 			throw noParameters();
 		}
 
-		Path folder = folder(parameters[0]);
+		Path folderOnDisk = folder(parameters[0]);
 		Field field = (Field) parameters[1];
 
 		Settings settings = Stereotypes.getFirst(field, Settings.class);
 
-		Path file = folder.resolve(getFileName(settings, field));
+		String fileName = getFileName(settings, field);
+
+		PropertiesProviderSelector selector = new UnflatteningPropertiesProviderSelector(new PropertyBasedPropertiesProvider(),
+		        new YamlConventionBasedPropertiesProvider(), new JsonBasedPropertiesProvider());
 
 		ConfigurationSource disk =
-				new FilesConfigurationSource(new SingleConfigFilesProvider(file.toAbsolutePath()));
-		ConfigurationSource defaults =
-				new SpecificClassPathConfigurationSource(type.getClassLoader(), new SingleConfigFilesProvider(file));
+		        new FilesConfigurationSource(new SingleConfigFilesProvider(folderOnDisk.resolve(fileName).toAbsolutePath()), selector);
+		ConfigurationSource defaults = new SpecificClassPathConfigurationSource(type.getClassLoader(),
+		        new SingleConfigFilesProvider(defaultFolder().resolve(fileName)), selector);
 
-		ConfigurationProvider provider = new ConfigurationProviderBuilder()
-				.withConfigurationSource(new FallbackConfigurationSource(disk, defaults))
-				.withReloadStrategy(reload(settings))
-				.build();
+		// TODO use new CachedConfigurationSource when it becomes available
+		ConfigurationSource source = new FallbackConfigurationSource(disk, defaults);
+		ImprovedConfigurationProvider provider = new ImprovedConfigurationProvider(source);
+		ReloadStrategy reload = reload(settings);
+		reload.register(provider::reload);
 
 		return provider.bind("", type);
 	}

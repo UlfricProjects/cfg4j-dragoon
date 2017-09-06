@@ -4,11 +4,8 @@ import org.cfg4j.source.ConfigurationSource;
 import org.cfg4j.source.context.environment.Environment;
 import org.cfg4j.source.context.environment.MissingEnvironmentException;
 import org.cfg4j.source.context.filesprovider.ConfigFilesProvider;
-import org.cfg4j.source.context.propertiesprovider.JsonBasedPropertiesProvider;
 import org.cfg4j.source.context.propertiesprovider.PropertiesProvider;
 import org.cfg4j.source.context.propertiesprovider.PropertiesProviderSelector;
-import org.cfg4j.source.context.propertiesprovider.PropertyBasedPropertiesProvider;
-import org.cfg4j.source.context.propertiesprovider.YamlBasedPropertiesProvider;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,16 +22,17 @@ public class SpecificClassPathConfigurationSource implements ConfigurationSource
 
 	private final ClassLoader classLoader;
 	private final ConfigFilesProvider configFilesProvider;
-	private final PropertiesProviderSelector propertiesProviderSelector =
-	        new PropertiesProviderSelector(new PropertyBasedPropertiesProvider(), new YamlBasedPropertiesProvider(),
-	                new JsonBasedPropertiesProvider());
+	private final PropertiesProviderSelector selector;
 
-	public SpecificClassPathConfigurationSource(ClassLoader classLoader, ConfigFilesProvider configFilesProvider) {
+	public SpecificClassPathConfigurationSource(ClassLoader classLoader, ConfigFilesProvider configFilesProvider,
+	        PropertiesProviderSelector selector) {
 		Objects.requireNonNull(classLoader, "classLoader");
 		Objects.requireNonNull(configFilesProvider, "configFilesProvider");
+		Objects.requireNonNull(selector, "selector");
 
 		this.classLoader = classLoader;
 		this.configFilesProvider = configFilesProvider;
+		this.selector = selector;
 	}
 
 	@Override
@@ -60,7 +58,7 @@ public class SpecificClassPathConfigurationSource implements ConfigurationSource
 					throw new IllegalStateException("Unable to load properties from classpath: " + path);
 				}
 
-				PropertiesProvider provider = propertiesProviderSelector.getProvider(path.getFileName().toString());
+				PropertiesProvider provider = selector.getProvider(path.getFileName().toString());
 				properties.putAll(provider.getProperties(input));
 
 			} catch (IOException exception) {

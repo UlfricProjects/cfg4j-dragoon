@@ -2,29 +2,37 @@ package com.ulfric.dragoon.cfg4j;
 
 import com.ulfric.dragoon.Factory;
 import com.ulfric.dragoon.extension.Extension;
+import com.ulfric.dragoon.extension.inject.Inject;
 import com.ulfric.dragoon.reflect.FieldProfile;
-
-import java.util.Objects;
+import com.ulfric.dragoon.reflect.LazyFieldProfile;
 
 public class SettingsExtension extends Extension {
 
 	public static final String DEFAULT_FILE_EXTENSION = "yml";
 
-	private final FieldProfile fields;
+	private final LazyFieldProfile fields = new LazyFieldProfile(this::createFieldProfile);
 
-	public SettingsExtension(Factory parent) {
-		Objects.requireNonNull(parent, "parent");
+	@Inject
+	private Factory parent;
 
-		this.fields = FieldProfile.builder()
+	private boolean loading;
+
+	private FieldProfile createFieldProfile() {
+		loading = true;
+		FieldProfile field = FieldProfile.builder()
 				.setFactory(parent.request(Cfg4jFactory.class))
 				.setSendFieldToFactory(true)
 				.setFlagToSearchFor(Settings.class)
 				.build();
+		loading = false;
+		return field;
 	}
 
 	@Override
 	public <T> T transform(T value) {
-		fields.accept(value);
+		if (!loading) {
+			fields.accept(value);
+		}
 		return value;
 	}
 
